@@ -63,7 +63,7 @@ print(docs)
 from zhipuai import ZhipuAI
 
 # 替换为您的实际 API 密钥
-api_key = "8fb21e517a965b10cf87b7fdadf18a74.UVLbxTJXdL3YLxcT"
+api_key = ""
 
 # 初始化 ZhipuAI 客户端
 client = ZhipuAI(api_key=api_key)
