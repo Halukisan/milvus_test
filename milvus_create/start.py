@@ -7,16 +7,16 @@ from dwspark.models import ChatModel
 from typing import List
 import gradio as gr # 通过as指定gradio库的别名为gr
 
-SPARKAI_APP_ID = 'ce51a015'
-SPARKAI_API_SECRET = 'ZGI3YjBhNDlhYzk0MmVmYjNmZjBkY2I0'
-SPARKAI_API_KEY = '10d0425e02925168597cb69c1f437709'
+SPARKAI_APP_ID = ''
+SPARKAI_API_SECRET = ''
+SPARKAI_API_KEY = ''
 # 加载sdk配置
 from sparkai.core.messages import ChatMessage, AIMessageChunk
 from dwspark.config import Config
 config = Config(SPARKAI_APP_ID, SPARKAI_API_KEY, SPARKAI_API_SECRET)
 
 # 替换为您的实际 API 密钥
-api_key = "8fb21e517a965b10cf87b7fdadf18a74.UVLbxTJXdL3YLxcT"
+api_key = ""
 
 # 小明发现了大型语言模型（LLM）的文本摘要功能，这个功能对小明来说如什么一样？
 # 这个功能对小明来说如同灯塔一样
