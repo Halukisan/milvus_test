@@ -114,7 +114,7 @@ def clean_insert(content):
 
 
 # 指定要读取的 Markdown 文件路径
-markdown_file_path = "../data_base/knowledge_db/prompt_engineering"
+markdown_file_path = "../data_base/knowledge_db/video_Test_Data"
 # # 检查文件是否存在
 # if os.path.exists(markdown_file_path):
 #     # 打开并读取文件内容
