@@ -105,7 +105,7 @@ class RAGApplication:
 
 if __name__ == "__main__":
     # 从环境变量获取API密钥
-    api_key = "8fb21e517a965b10cf87b7fdadf18a74.UVLbxTJXdL3YLxcT"
+    api_key = ""
     if not api_key:
         raise ValueError("Environment variable ZHIPUAI_API_KEY is not set.")
 
