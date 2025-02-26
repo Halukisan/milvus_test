@@ -155,5 +155,21 @@ def handle_line(keyVector_java,keyVector_mysql,keyVector_redis,keyVector_web):
                 
                 insert(category,doc_entry)
 
-                
+def ForOuthandleLine(keyVector_java,keyVector_mysql,keyVector_redis,keyVector_web,user_query):
+    # 创建责任链
+    java_category_vector = np.array(keyVector_java)     # java类责任链
+    mysql_category_vector = np.array(keyVector_mysql)       # mysql类责任链
+    redis_category_vector = np.array(keyVector_redis)        # redis类责任链
+    web_category_vector = np.array(keyVector_web)       # 网络类责任链
+
+    handler_java = JAVA_CategoryHandler(category_vector=java_category_vector, next_handler=handler_mysql)
+    handler_mysql = MYSQL_CategoryHandler(category_vector=mysql_category_vector, next_handler=handler_redis)
+    handler_redis = REDIS_LCategoryHandler(category_vector=redis_category_vector, next_handler=handler_web)
+    handler_web = WEB_CategoryHandler(category_vector=web_category_vector)
+
+    category = handler_java.handle(user_query)
+    return category
+
+
+          
 

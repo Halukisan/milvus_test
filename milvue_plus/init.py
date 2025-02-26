@@ -1,5 +1,5 @@
 # 用于初始化计算中心向量
-from create import create
+from create import handle_line
 from create import custom_text_splitter
 from sentence_transformers import SentenceTransformer
 from sklearn.cluster import KMeans
@@ -69,4 +69,4 @@ def init():
     redis_keyVectors = k_mean("redis")
     web_keyVectors = k_mean("web")
 
-    create(java_keyVectors,mysql_keyVectors,redis_keyVectors,web_keyVectors)
+    handle_line(java_keyVectors,mysql_keyVectors,redis_keyVectors,web_keyVectors)
