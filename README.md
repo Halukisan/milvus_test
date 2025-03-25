@@ -43,3 +43,5 @@
 
 优化：
     分块存储后，模型的回答可以做优化，比如加入CoT，提高模型回答准确度。
+### text_search_pic
+使用文字搜索图片，使用了toWhere，向量化使用的是openai的clip-vit-base-patch16
