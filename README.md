@@ -1,6 +1,11 @@
-## 项目介绍
+# 项目介绍
+## 数据集
 ### data_base/knowledge_db
 该目录下存放着用于向量化存储的数据，包含md，word，pdf等文件。
+
+## 搜索
+### text_search_pic
+使用文字搜索图片，使用了toWhere，向量化使用的是openai的clip-vit-base-patch16
 ### data_maker
 该目录下是通用文件处理代码，可以一次性获取所有的md文件或者pdf文件并读取内容进行格式化。
 ### csdn_milvus
@@ -23,6 +28,7 @@
 3. 待定......
 
 
+## 两种聚类方法
 ### milvus_plus
 
 参考推荐系统fun-rec中的余弦相似度分类数据得到的如下思路：
@@ -44,8 +50,13 @@
 
 优化：
     分块存储后，模型的回答可以做优化，比如加入CoT，提高模型回答准确度。
-### text_search_pic
-使用文字搜索图片，使用了toWhere，向量化使用的是openai的clip-vit-base-patch16
+
+### milvus_HDBSCAN
+HDBSCAN 是一种基于密度的聚类算法，它能够处理噪声和任意形状的聚类。该算法通过计算数据点之间的距离来确定聚类，并能够自动确定聚类的数量。
+
+我们使用 BGE-M3 嵌入模型从新闻标题数据集中提取嵌入，利用 Milvus 计算嵌入之间的距离以帮助 HDBSCAN 进行聚类，然后使用 UMAP 方法将结果可视化以进行分析。
+如果你的电脑没有nvida的GPU,建议在魔搭社区的notebookGPU环境下运行该项目
+
 
 ## Need to know
 ### 构建数据集要求
