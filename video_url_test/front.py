@@ -24,10 +24,13 @@ class RAGApplication:
         self.collection.load()
 
     def is_valid_url(self, string):
+        # 尝试解析字符串
         try:
             result = urlparse(string)
+            # 如果解析成功，返回scheme和netloc是否都存在
             return all([result.scheme, result.netloc])
         except:
+            # 如果解析失败，返回False
             return False
 
     def extract_urls(self, text):
