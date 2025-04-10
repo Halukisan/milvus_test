@@ -18,18 +18,18 @@ import gradio as gr
 """
 
 def multi_recall(query_text, top_k=5):
-    milvus_results = get_embedding(query_text)
+    milvus_results,url = get_embedding(query_text)
     es_results = search_elasticsearch(query_text)
     function_calling_results = call_with_messages(query_text)
     all_results = milvus_results + es_results + function_calling_results
     all_results.sort(key=lambda x: x[1], reverse=True)
-    return all_results[:top_k]
+    return all_results[:top_k],url
 
 if __name__ == "__main__":
 
-    query_text = "请根据以下信息进行回答："
+    query_text = ""
     
-    results = multi_recall(query_text, top_k=5)
+    results,url = multi_recall(query_text, top_k=5)
 
     messages = [
             {
@@ -38,13 +38,14 @@ if __name__ == "__main__":
             },
             {
                 "role":"assistant",
-                "content": "请根据以下信息进行回答：f{results}"
+                "content": "请根据以下信息进行回答：f{results},这是你查询到的信息中可能包含的URL：{url}，如果它不为空，请在你的回答的结尾把相关url拼接上去，如果为空直接忽略，不做拼接处理。"
             },
             {
                 "role": "user",
-                "content": f"{results}"
+                "content": f"{query_text}"
             }
     ]
+
     # 创建 Gradio 界面
     with gr.Blocks() as demo:
         gr.Markdown("# RAG Application")
