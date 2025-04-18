@@ -1,74 +1,20 @@
 # 项目介绍
-## 数据集
-### data_base/knowledge_db
-该目录下存放着用于向量化存储的数据，包含md，word，pdf等文件。
 
-## 搜索
-### text_search_pic
-使用文字搜索图片，使用了toWhere，向量化使用的是openai的clip-vit-base-patch16
-### data_maker
-该目录下是通用文件处理代码，可以一次性获取所有的md文件或者pdf文件并读取内容进行格式化。
-### csdn_milvus
-该目录下存放着最基础的向量数据库的构建和数据处理，如果不了解milvus，先看这个文件下的代码。
-### milvus_create 
-该目录下存放着结合构建milvus和rag的代码
-### video_url_test
-该目录下存放的代码解决了如下问题
+## rec_milvus
+包含以下内容：
+1. 数据集
+2. text_search_pic文字搜索图片
+3. data_maker该目录下是通用文件处理代码，
+4. video_url_test url存储与切分
+5. milvus_gpu 启动GPU索引
+6. milvus_multi_recall多路召回：Milvus+Elasticsearch+function_calling+text_search_pic功能
 
-1. 想用rag实现一个视频推送功能，用户提问，然后大模型给出文字回答和相关文字解释视频的播放地址，在灌库之前应该怎么处理，直接让播放地址和文字一起，播放地址可能就会被切断。就是切割的时候会把视频的url 切成两半，然后输出的url地址打不开。
-2. milvus的结构设计，有利于后期的优化处理
-3. 快速便捷的批量读取各种类型文件数据并且自动获取其中的url并结合文字描述，合理地存储到milvus中
-4. 用户询问一些专业知识，可以根据milvus里面获取到数据并且返回给我相应的url，但是，我如果问你好，或者哇哦等普通词语，他也会随便给我返回url。解决方案：根据召回分数进行筛选数据：这种闲聊召回的数据分数都不高，设定一个min score，召回的top k中的每条数据至少超过这个min score，才能融合到prompt中
-5. gradio编写的极为简单的页面
-
-后期扩展内容
-
-1. 优化页面展示（url和文字分开的更加优美）
-2. 增加functionCalling功能，优化数据的获取与展示
-3. 待定......
-### milvus_gpu
-参考链接:https://cloud.tencent.com/developer/article/2326764
-
-### 多路召回：
-1. Milvus：使用Milvus进行向量搜索，获取最相似的文档。
-2. Elasticsearch：使用Elasticsearch进行关键词搜索，获取最相似的文档。
-3. function_calling：基于通义千问，联网查询，获得最新数据。
-4. 将以上三个结果进行排序，并返回最相似的文档。
-5. prompt中限制模型回答，temperature设置为0.1。
-6. 接入text_search_pic功能
-
-对于数据存储部分，将所有数据分别都存入milvus和ES中，milvus中存储结合video_url_test中的代码，提供URL识别与拆分，然后采用HDBSCAN聚类算法，采用GPU索引CPU_BRUTE_FORCE
-
-而对于ES部分，采用DFS QUERY THEN　ＦＥＴＣＨ方式，在查询之前先分散计算各分片的词频信息，然后再执行查询，这种方式能提供更加准确的结果。
-
-## 两种聚类方法
-### milvus_plus
-
-参考推荐系统fun-rec中的余弦相似度分类数据得到的如下思路：
-
-* 基于k-mean聚合后得到中心标准向量
-* 自动读取文档内容
-* 责任链模式进行匹配
-* 分块存储数据，提高查询效率
-
-使用步骤：
-    首先init.py文件中，计算中心标准向量，这里的文件名称需要规范，因为下面的代码是写死的，这个文件要单独执行，主要就是计算中心标准向量，其他的都不做。对于这个示例代码，我需要存放到文件夹中的md文件名称需要是java、mysql、redis、web。
-
-    此时我们获得到了中心标准向量，然后就可以进行下面的操作了，在create.py文件中，可以进行如下操作。读取所有你需要进行向量化存储的文件（这里不用规范名称了，只要是md文件都行），进入责任链，然后存储milvus中。
-    至此，分块存储完成（详细请看代码，有注释）
-    
-    start.py中包含启动函数，运行之前，请手动把中心标准向量复制到里面，（此处不宜设置为自动处理，手动更好）。
-    对于用户问题，同样的流程，向量化后进责任链，确定数据所处分块的位置后，取前五条最相似的数据进行相似度匹配，大于预设的值的可以作为参考数据，写入prompt中。
+两种聚类方法
+1. milvus_plus：基于k-mean聚合
+2. milvus_HDBSCAN：基于密度的聚类算法
 
 
-优化：
-    分块存储后，模型的回答可以做优化，比如加入CoT，提高模型回答准确度。
 
-### milvus_HDBSCAN
-HDBSCAN 是一种基于密度的聚类算法，它能够处理噪声和任意形状的聚类。该算法通过计算数据点之间的距离来确定聚类，并能够自动确定聚类的数量。
-
-我们使用 BGE-M3 嵌入模型从新闻标题数据集中提取嵌入，利用 Milvus 计算嵌入之间的距离以帮助 HDBSCAN 进行聚类，然后使用 UMAP 方法将结果可视化以进行分析。
-如果你的电脑没有nvida的GPU,建议在魔搭社区的notebookGPU环境下运行该项目
 
 
 ## Need to know
