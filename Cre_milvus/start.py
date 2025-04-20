@@ -1,8 +1,12 @@
 from dataBuilder.data import data_process
 from milvusBuilder import milvus_connect
 from IndexParamBuilder import indexParams
+from reorder import reorder_clusters
 from Search import search
 from pymilvus import connections
+import hdbscan
+from sklearn.cluster import KMeans
+import numpy as np
 
 def Cre_VectorDataBaseStart(C_G_Choic,IP,Port,UserName,PassWord,VectorName,CollectionName,IndexName,ReplicaNum,Data_Location,Data_Type,url_split,embedding_model,api_key):
     """
@@ -33,7 +37,7 @@ def Cre_VectorDataBaseStart(C_G_Choic,IP,Port,UserName,PassWord,VectorName,Colle
     Con_status = milvus_connect(IP,Port,UserName,PassWord,VectorName,CollectionName,indexParam,ReplicaNum,dataList,url_split=url_split)
     return Con_status
 
-def Cre_Search(VectorName,CollectionName,IP,Port,UserName,PassWord,question,topK,ColChoice,api_key):
+def Cre_Search(VectorName,CollectionName,IP,Port,UserName,PassWord,question,topK,ColChoice,api_key,reorder_strategy="distance"):
     """
     IP：milvus数据库的地址
     Port：端口
@@ -47,17 +51,60 @@ def Cre_Search(VectorName,CollectionName,IP,Port,UserName,PassWord,question,topK
     EmbeddingModelName： 选择embedding模型
     modelName：选择问答模型
     api_key：api_key默认用的是ChatGLM
+    reorder_strategy (str): 重排序策略，可选值为 "distance", "cluster_size", "cluster_center"。
 
     返回值：返回搜索结果
     """
-    # 连接到Milvus数据库
-    connections.connect(VectorName,host=IP, port=Port, user=UserName, password=PassWord)
-    # 搜索数据
-    responses = search(VectorName,CollectionName,IP,Port,UserName,PassWord,question,topK,api_key)
-    # 返回搜索结果列表
-
-    # 选择聚类算法
     
+    # 连接到 Milvus 数据库
+    connections.connect(VectorName, host=IP, port=Port, user=UserName, password=PassWord)
+
+    # 搜索数据
+    responseList = search(VectorName, CollectionName, IP, Port, UserName, PassWord, question, topK, api_key)
+
+    # 检查搜索结果是否为空
+    if not responseList:
+        return {"message": "No results found", "clusters": []}
+
+    # 提取搜索结果中的向量和 ID
+    embeddings = [result["embedding"] for result in responseList]
+    ids = [result["id"] for result in responseList]
+
+    # 转换为 NumPy 数组
+    embeddings = np.array(embeddings)
+
+    # 根据选择的聚类算法进行聚类
+    if ColChoice.lower() == "hdbscan":
+        clusterer = hdbscan.HDBSCAN(min_samples=3, min_cluster_size=2)
+        labels = clusterer.fit_predict(embeddings)
+    elif ColChoice.lower() == "kmeans":
+        k = min(len(embeddings), 5)  # 设置聚类数量，最多为5
+        clusterer = KMeans(n_clusters=k, random_state=42)
+        labels = clusterer.fit_predict(embeddings)
+    else:
+        raise ValueError(f"Unsupported clustering algorithm: {ColChoice}")
+
+    # 将聚类结果与搜索结果结合
+    clustered_results = {}
+    for idx, label in enumerate(labels):
+        if label not in clustered_results:
+            clustered_results[label] = []
+        clustered_results[label].append({
+            "id": ids[idx],
+            "embedding": embeddings[idx].tolist(),
+            "distance": responseList[idx]["distance"]
+        })
+
+    # 对聚类结果进行重排序
+    query_vector = responseList[0]["embedding"]  # 假设第一个结果的向量为查询向量
+    sorted_clusters = reorder_clusters(clustered_results, query_vector, strategy=reorder_strategy)
+
+    # 返回重排序后的聚类结果
+    return {
+        "message": "Search, clustering, and reordering completed",
+        "clusters": sorted_clusters
+    }
+
 
 
 
