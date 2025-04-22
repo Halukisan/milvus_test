@@ -1,0 +1,40 @@
+milvus:
+  host: 127.0.0.1
+  port: 19530
+  user: admin
+  password: yourpassword
+  vector_name: my_vector_db
+  collection_name: my_collection
+  index_name: IVF_FLAT
+  replica_num: 1
+
+data:
+  location: ./data/
+  url_split: false
+
+embedding:
+  model: sentence-transformers/all-MiniLM-L6-v2
+  api_key: your_api_key
+
+search:
+  topK: 10
+  col_choice: hdbscan
+  reorder_strategy: distance
+
+
+    # C_G_Choic：选择GPU索引还是CPU索引，cpu gpu
+    # IP：milvus数据库的地址
+    # Port：端口
+    # UserName：用户名
+    # PassWord：密码
+    # VectorName：向量数据库名称
+    # CollectionName：集合名称
+    # IndexName：索引选择 对于GPU索引选择GPU_BRUTE_FORCE，对于CPU索引选择IVF、IVF_FLAT，HNSW，HNSW_SQ8等
+    # ReplicaNum：是否启用内存副本 输入内存副本的数量，0表示不启用内存副本
+    # Data_Location：数据文件的路径pdf、txt、md、csv。图片数据请把图片的地址放到csv文件中。
+    # Data_Type:文件类型
+    # url_split:是否启用url切分和提取功能 True or False
+
+    # embedding_model：选择embedding模型
+    # api_key：api_key
+    # 返回值：true or false表示向量数据库构建是否成功

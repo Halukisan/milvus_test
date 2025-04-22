@@ -1,44 +1,158 @@
-## Introduction
-为什么要做这个,对于RAG的检索数据和性能,不一定要按照宁可获取的数据多,也不能少的原则,而是要达到一个性能和数据量之间的平衡。通过聚类算法，将相似的数据聚在一起，从而提高检索性能。除此之外,也是想做一个方便的接口,只需要输入参数,即可获取一个高性能(我自己认为的,目前没有安排分布式....)的向量数据库方案。
-### 基础功能
-可快速接入项目的Milvus向量数据库方案，:done
-提供CPU和GPU索引选择，:done
-登录加密、:done
-数据聚类分块选择，done
-内存副本以提高吞吐，:done
-多模态数据（文本、文件、图片）自动化处理和存储。:done
+# 🚀 项目启动教程
 
-## 优化
-1. 加入ES进行多路召回
-2. 加入缓存（Redis），优化检索性能。
-3. 结合基于k8s的日志监控
-4. 对结果重排序，将相似的内容分到一起
-5. 分布式？内存分片？
-6. 文件处理多线程。done
-7. 处理失败后重试机制
-8. 数据质量评估并标记，将低质量的数据分为其他的collection中
+欢迎使用本项目！以下是详细的启动教程，帮助你快速上手。
 
+---
 
-### 关于聚类的时机
-下面有三种使用聚类算法的时机：
-1. 如果检索性能是首要目标：
-   * 在数据存储时进行聚类，并将聚类标签存储到数据库中。
-   * 检索时直接利用聚类标签快速定位相关数据
-2. 如果数据动态变化比较频繁：
-   * 在检索时对召回的数据进行分类，动态分析数据分布
-3. 如果需要离线数据分析
-   * 定期对数据进行聚类，用于分析或推荐系统
-请理解聚类的概念,可以参考哔哩哔哩中zilliz的讲解视频,在二维平面上,运用聚类算法可以更好的将相似的数据聚在一起，从而提高检索性能。
-> 目前采用的方案一:性能作为首选目标
+## 1. 克隆或下载项目代码
 
-### 关于重排序
-有四种方案
-1. 基于距离的重排序
-   * 在二维平面中,每个聚类都有聚类中心向量,将每个聚类的结果按照与中心向量的距离进行重排序,优先返回距离比较近的结果
-2. 基于聚类大小的重排序
-   * 按照聚类的大小(每个聚类中包含的结果数量)从大到小排序,优先返回较大的聚类
-3. 基于聚类中心的重排序
-   * 计算每个聚类的中心点,按质心与查询向量的距离从小到大排序
-4. 基于特定业务的重排序
-   * 你自己怎么想的就怎么做
+首先，获取项目代码：
 
+```bash
+git clone <项目仓库地址>
+cd <项目目录>
+```
+
+或者直接从 GitHub 下载 ZIP 文件并解压。
+
+---
+
+## 2. 安装依赖
+
+确保你的系统已安装 **Python 3.8+**。推荐使用虚拟环境来管理依赖。
+
+```bash
+# 创建虚拟环境（可选）
+python -m venv venv
+source venv/bin/activate  # Windows: venv\Scripts\activate
+
+# 安装依赖
+pip install -r requirements.txt
+```
+
+---
+
+## 3. 配置 Milvus、Elasticsearch、Redis 服务
+
+### 3.1 Milvus
+- 参考 [Milvus 官方文档](https://milvus.io/docs) 启动服务。
+- 记下以下信息：
+  - `host`
+  - `port`
+  - 用户名和密码（如有）。
+
+### 3.2 Elasticsearch
+- 推荐使用 **7.x 版本**。
+- 启动后记下以下信息：
+  - `host`
+  - `port`。
+
+### 3.3 Redis
+- 可以使用本地或远程 Redis 服务。
+- 记下以下信息：
+  - `host`
+  - `port`。
+
+---
+
+## 4. 配置 `config.yaml`
+
+在项目根目录下创建或修改 `config.yaml` 文件，填写你的服务信息和参数。例如：
+
+```yaml
+milvus:
+  host: "localhost"
+  port: 19530
+  username: ""
+  password: ""
+
+elasticsearch:
+  host: "localhost"
+  port: 9200
+
+redis:
+  host: "localhost"
+  port: 6379
+
+data_path: "./data/upload"  # 数据文件路径
+```
+
+---
+
+## 5. 上传你的数据
+
+将你的数据文件（支持 `csv`、`md`、`pdf`、`txt` 格式）放入 `./data/upload` 文件夹（或你在 `config.yaml` 中指定的路径）。
+
+---
+
+## 6. 构建向量数据库
+
+运行主流程，自动处理数据并构建 Milvus 向量库：
+
+```bash
+python main.py
+```
+
+如需交互式体验，可以使用 Streamlit 前端：
+
+```bash
+streamlit run app.py
+```
+
+---
+
+## 7. 检索与聚类
+
+你可以通过以下方式使用检索与聚类功能：
+
+### 7.1 前端页面
+- 打开前端页面，输入检索问题。
+- 选择聚类和重排序方式。
+- 查看聚类和重排序后的结果。
+
+### 7.2 Python 交互环境
+在 Python 环境中调用相关函数：
+
+```python
+from your_module import search_and_cluster
+
+results = search_and_cluster(query="你的问题", cluster_method="kmeans")
+print(results)
+```
+
+---
+
+## 8. （可选）启动后端 API 服务
+
+如需前后端分离体验，可以运行 FastAPI 后端服务：
+
+```bash
+uvicorn api:app --reload
+```
+
+访问 `http://localhost:8000/docs` 查看 API 文档。
+
+---
+
+## 9. 常见问题
+
+### 9.1 服务未启动
+请确保 **Milvus**、**Elasticsearch** 和 **Redis** 均已启动并正确配置。
+
+### 9.2 依赖缺失
+检查是否完整安装了 `requirements.txt` 中的依赖。
+
+### 9.3 数据格式问题
+确保上传的数据文件格式正确，目前支持 `csv`、`md`、`pdf` 和 `txt`。
+
+---
+
+## 10. 参考
+
+- [Milvus 官方文档](https://milvus.io/docs)
+- [Elasticsearch 官方文档](https://www.elastic.co/guide/index.html)
+- [Redis 官方文档](https://redis.io/documentation)
+
+---
+
+如有其他问题，欢迎提交 issue 或联系开发者！ 😊

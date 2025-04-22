@@ -1,16 +1,9 @@
-from sentence_transformers import SentenceTransformer
-from sklearn.cluster import KMeans
-import numpy as np
 from pymilvus import connections, FieldSchema, CollectionSchema, DataType, Collection
-from zhipuai import ZhipuAI
 import hdbscan
-import os
 import logging
-import re
-def milvus_connect(IP, Port, UserName, Password, VectorName, CollectionName, IndexParam, ReplicaNum, dataList, url_split):
+def milvus_connect(IP, Port, UserName, Password, VectorName, CollectionName, IndexParam, ReplicaNum, dataList, url_split, return_collection=False):
     try:
-        # 连接Milvus服务器
-        connections.connect(VectorName, host=IP, port=Port, user=UserName, password=Password)
+        # 不再重复连接Milvus，连接已在init.py完成
 
         # 检查并创建collection
         collection_name = CollectionName
@@ -47,7 +40,13 @@ def milvus_connect(IP, Port, UserName, Password, VectorName, CollectionName, Ind
 
         # 启用内存副本
         collection.load(replica_number=ReplicaNum)
-        return True
+        if return_collection:
+            return True, collection
+        else:
+            return True
     except Exception as e:
         logging.error(f"An error occurred: {e}")
-        return False
+        if return_collection:
+            return False, None
+        else:
+            return False

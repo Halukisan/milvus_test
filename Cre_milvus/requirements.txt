@@ -1,0 +1,20 @@
+numpy
+scikit-learn
+hdbscan
+pyyaml
+pymilvus>=2.2.0
+elasticsearch>=7.0.0,<8.0.0
+redis
+fastapi
+uvicorn
+streamlit
+pandas
+markdown
+PyPDF2
+requests
+sentence-transformers
+umap-learn
+plotly
+pandas
+zhipuai
+# pip install -r requirements.txt
