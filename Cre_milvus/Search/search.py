@@ -1,77 +1,38 @@
 from pymilvus import Collection
-from Search.EsSer import es_search
-from Search.redisSer import cached_search
-from zhipuai import ZhipuAI
+from Search.ES.EsSer import es_search
+from Search.embedding import EmbeddingGenerator
 from System.init import es_client, redis_client
-from elasticsearch import Elasticsearch
-from .keyword_extractor import KeywordExtractor
+from System.monitor import log_event
+from Search.redisSer import search_similar_embedding, cache_embedding_result
+from Search.milvusSer import milvus_search
 
-def search(VectorName, CollectionName, question, topK, api_key):
-    query_key = f"{VectorName}_{CollectionName}_{question}_{topK}"
 
+def search(CollectionName, question, topK):
+    results = None
     def _do_search():
+        log_event("多路召回开始")
         collection = Collection(CollectionName)
-        client = ZhipuAI(api_key=api_key)
-        embedding = client.embeddings.create(model="embedding-2", input=[question]).data[0].embedding
-        milvus_results = collection.search(
-            data=[embedding],
-            anns_field="embedding",
-            limit=topK,
-            param={"metric_type": "L2", "params": {"nprobe": 10}},
-            output_fields=["id", "content", "embedding"]
-        )
-        milvus_list = [
-            {
-                "id": hit.id,
-                "content": hit.entity.get("content", ""),
-                "embedding": hit.entity.get("embedding", []),
-                "distance": hit.distance
-            }
-            for hit in milvus_results[0]
-        ]
+        embber = EmbeddingGenerator()
+        embedding = embber.get_embedding(question)
+        # 2. 先查redis向量缓存
+        results = search_similar_embedding(redis_client,embedding,redis_client)
+        if results:
+            return results
+        
+        milvus_list = milvus_search(collection, embedding, topK)
         es_list = []
         if es_client:
             # 新增：关键词提取后ES检索
-            extractor = KeywordExtractor()
-            keywords = extractor.extract_keywords(question, top_k=5)
-            es_query = {
-                "query": {
-                    "bool": {
-                        "must": [
-                            {"match": {"content": kw}} for kw in keywords
-                        ]
-                    }
-                }
-            }
-            resp = es_client.search(index="doc_index", body=es_query, size=topK)
-            es_list = [
-                {
-                    "id": hit["_id"],
-                    "content": hit["_source"].get("content", ""),
-                    "embedding": hit["_source"].get("embedding", []),
-                    "distance": hit["_score"]
-                }
-                for hit in resp["hits"]["hits"]
-            ]
+            es_list = es_search(es_client, question, topK, es_index="doc_index")
+        if milvus_list:
+            log_event("milvus_list结果为空")
+        if es_list:
+            log_event("es_list结果为空")
         all_results = milvus_list + es_list
         all_results = [r for r in all_results if r.get("embedding")]
+        # 4. 写入redis向量缓存
+        cache_embedding_result(redis_client, all_results)
         return all_results
-
-    results = cached_search(query_key, _do_search, redis_client)
+    
+    results = _do_search()
     return results
-
-def search_by_keywords(query, top_k=5, es_host="http://localhost:9200", index_name="doc_index"):
-    es_client = Elasticsearch(es_host)
-    extractor = KeywordExtractor()
-    keywords = extractor.extract_keywords(query, top_k=top_k)
-    es_query = {
-        "query": {
-            "bool": {
-                "must": [
-                    {"match": {"content": kw}} for kw in keywords
-                ]
-            }
-        }
-    }
-    res = es_client.search(index=index_name, body=es_query)
-    return res["hits"]["hits"], keywords

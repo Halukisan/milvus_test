@@ -7,15 +7,14 @@ milvus:
   collection_name: my_collection
   index_name: IVF_FLAT
   replica_num: 1
-
+  index_device: cpu
 data:
   location: ./data/
   url_split: false
 
-embedding:
-  model: sentence-transformers/all-MiniLM-L6-v2
-  api_key: your_api_key
-
+elasticsearch:
+  host: http://127.0.0.1:9200
+  index_name: my_index
 search:
   topK: 10
   col_choice: hdbscan
@@ -35,6 +34,4 @@ search:
     # Data_Type:文件类型
     # url_split:是否启用url切分和提取功能 True or False
 
-    # embedding_model：选择embedding模型
-    # api_key：api_key
     # 返回值：true or false表示向量数据库构建是否成功

@@ -1,3 +1,14 @@
+# TodoList
+**HalukiSan**：
+1. （noraml）对于召回回来的数据，可能是存在url或者图片地址的，总之都是一个url，现在需要在前端做一个展示，如果数据中包含url（代码已经做了提取处理了）就在前端中展示出来，这个url可能是网络链接，也可能是图片的地址，如果是图片，需要渲染出来。
+2. （important）search中，关于milvus检索部分，需要一个是否切分url的status（true\false）,然后在milvus_search.py中进行判断，如果有url，返回的数据就要包含url的一列，否则不包含。
+3. （important） 检查ES和Redis中是否有根据url进行判断决定存储结构中是否应该包含url一列。（es_utils.py/redisSer.py）存储和查询的都要检查，可能会遇到，存储里面的有url，但查询返回的数据里面设置了没有url！
+   
+
+**NN**：
+1. （important） 文本内容审核正确性，Cre_milvus\System\eval.py中
+
+
 # 🚀 项目启动教程
 
 欢迎使用本项目！以下是详细的启动教程，帮助你快速上手。
@@ -28,6 +39,9 @@ source venv/bin/activate  # Windows: venv\Scripts\activate
 
 # 安装依赖
 pip install -r requirements.txt
+# 图片向量化模型下载
+modelscope download --model openai-mirror/clip-vit-base-patch16 --local_dir /model
+
 ```
 
 ---

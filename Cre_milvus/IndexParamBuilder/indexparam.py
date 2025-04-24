@@ -1,16 +1,8 @@
-import pymilvus
-from pymilvus import connections, FieldSchema, CollectionSchema, DataType, Collection
-from zhipuai import ZhipuAI
-import os
-import logging
-import re
-import time
-from urllib.parse import urlparse
 
 """
 索引构建，选择CPU还是GPU来构建索引
 """
-def indexParam(Choice,IndexName):
+def indexParamBuilder(Choice,IndexName):
     if Choice == "gpu":
         index_params={
         "metric_type": "L2",

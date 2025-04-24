@@ -2,14 +2,12 @@ import csv
 import numpy as np
 from towhee import pipe, ops
 import os
-def process_csv(csv_path, model_name, api_key):
+def process_csv(csv_path):
     """
     处理 CSV 文件中的图片数据并返回图片 ID 和向量数据的列表。
 
     参数:
         csv_path (str): CSV 文件路径。
-        model_name (str): 用于向量化的模型名称。
-
     返回:
         list: 包含图片 ID 和向量数据的列表，格式为 [(id, vector), ...]。
     """
@@ -35,7 +33,7 @@ def process_csv(csv_path, model_name, api_key):
         pipe.input('csv_file')
         .flat_map('csv_file', ('id', 'path'), read_csv)
         .map('path', 'img', ops.image_decode.cv2('rgb'))
-        .map('img', 'vec', ops.image_text_embedding.clip(model_name=model_name, modality='image', device=0))
+        .map('img', 'vec', ops.image_text_embedding.clip(model_name='clip-vit-base-patch16', modality='image', device=0))
         .map('vec', 'vec', lambda x: x / np.linalg.norm(x))
         .map(('id', 'vec'), (), collect_results)  # 收集结果到列表
         .output()

@@ -1,7 +1,8 @@
-from pymilvus import connections, FieldSchema, CollectionSchema, DataType, Collection
+from pymilvus import FieldSchema, CollectionSchema, DataType, Collection
 import hdbscan
 import logging
-def milvus_connect(IP, Port, UserName, Password, VectorName, CollectionName, IndexParam, ReplicaNum, dataList, url_split, return_collection=False):
+from System.eval import insert_with_quality_check
+def milvus_connect_insert(CollectionName, IndexParam, ReplicaNum, dataList, url_split, return_collection=False):
     try:
         # 不再重复连接Milvus，连接已在init.py完成
 
@@ -33,8 +34,18 @@ def milvus_connect(IP, Port, UserName, Password, VectorName, CollectionName, Ind
         # 插入数据
         for i, data in enumerate(dataList):
             data["cluster_label"] = labels[i]
-        collection.insert(dataList)
 
+        # 评估数据质量,高质量的数据会自动插入milvus，低质量的数据将会插入到low_quality_data集合中
+        hig_dataList_insert_status,low_dataList_insert_status = insert_with_quality_check(dataList) 
+        if not low_dataList_insert_status:
+            # 低质量数据插入失败，程序继续运行
+            logging.error("Low quality data insertion failed.")
+        if not hig_dataList_insert_status:
+            # 高质量数据插入失败，程序结束运行
+            logging.error("High quality data insertion failed.")
+            return False, None
+
+        
         # 创建索引
         collection.create_index(field_name="embedding", index_params=IndexParam)
 

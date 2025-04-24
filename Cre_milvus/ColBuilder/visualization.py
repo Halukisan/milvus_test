@@ -1,7 +1,5 @@
-import numpy as np
 import pandas as pd
 from umap import UMAP
-import hdbscan
 
 def get_cluster_visualization_data(embeddings, labels, texts):
     """

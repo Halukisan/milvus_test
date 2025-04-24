@@ -2,7 +2,7 @@ import numpy as np
 
 def reorder_clusters(clustered_results, query_vector, strategy="distance"):
     """
-    对聚类结果进行重排序。
+    对聚类结果和搜索结果进行重排序。
     """
     query_vector = np.array(query_vector)
 

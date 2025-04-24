@@ -1,23 +1,19 @@
 import os
 import re
 from langchain.text_splitter import RecursiveCharacterTextSplitter
-from zhipuai import ZhipuAI
-from urllib.parse import urlparse
+from Search.embedding import EmbeddingGenerator
 
-def process_txt(txt_path, model_name, api_key, url_split):
+def process_txt(txt_path, url_split):
     """
     处理 TXT 文件并返回一个包含 id、content、embedding 和 URL 的列表。
 
     参数:
         txt_path (str): TXT 文件路径。
-        model_name (str): 嵌入模型名称。
-        api_key (str): ZhipuAI 的 API 密钥。
+        url_split (bool): 是否将 URL 分割成单独的字段。
 
     返回:
         list: 包含 id、content、embedding 和 URL 的列表，格式为 [{'id': id, 'content': content, 'embedding': embedding, 'urls': [url1, url2, ...]}, ...]。
     """
-    # 初始化 ZhipuAI 客户端
-    client = ZhipuAI(api_key=api_key)
 
     # 定义正则表达式清洗函数
     def clean_content(content):
@@ -63,11 +59,9 @@ def process_txt(txt_path, model_name, api_key, url_split):
             non_url_text = non_url_text[:start] + non_url_text[end:]
         non_url_text = re.sub(r'\s+', ' ', non_url_text).strip()
 
-        response = client.embeddings.create(
-            model=model_name,
-            input=non_url_text
-        )
-        embedding = response['data'][0]['embedding']
+        embedder = EmbeddingGenerator()
+            
+        embedding = embedder.get_embedding(non_url_text)
         if url_split:
             results.append({
                 'id': current_id,

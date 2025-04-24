@@ -18,142 +18,58 @@
 7. 处理失败后重试机制
 8. 数据质量评估并标记，将低质量的数据分为其他的collection中
 
-## 项目流程图（自动生成的）
-```mermaid
 
-flowchart TD
-    %% Styling Definitions
-    classDef db fill:#6bd,stroke:#369,stroke-width:2px,color:#fff;
-    classDef process fill:#9f9,stroke:#090,stroke-width:2px;
-    classDef decision fill:#f96,stroke:#c60,stroke-width:2px;
-    classDef startend fill:#f9f,stroke:#333,stroke-width:2px;
-    classDef cache fill:#fc3,stroke:#c90,stroke-width:2px;
-    classDef cluster fill:#c9f,stroke:#96c,stroke-width:2px;
+### 关于两种聚类算法
+**K-Means**
+k-means是一种基于划分的聚类算法，主要思想是把数据划分到k个簇，每个簇都有中心点。
+该算法速度快，形成的簇近似于球形，适合于大量的、简单的、规则的数据集。
+1. 用户选择簇的数量
+2. 随机选择K个点作为中心点
+3. 将每个样本分配到距离最近的质心所在的簇
+4. 对每个簇重新计算所有成员的平均值作为新的质心
+5. 重复步骤3和4，直到质心不在变化或者到达最大的迭代次数
+6. 
+**原理：** k-means 的核心思想是，把数据分成 k 个群组（也叫簇），每个群组都有一个“中心点”（也叫质心），目标是让每个点都尽可能靠近自己群组的中心点。简单来说，就是“物以类聚，人以群分”。
 
-    %% Database Construction Process
-    A["Cre_VectorDataBaseStart
-    参数:
-    - C_G_Choic, IP, Port
-    - UserName, PassWord
-    - VectorName, CollectionName
-    - IndexName, ReplicaNum
-    - Data_Location, Data_Type
-    - url_split, embedding_model, api_key"]:::startend
-    
-    A --> B1["init_milvus
-    参数:
-    - alias=VectorName
-    - host=IP, port=Port
-    - user=UserName, password=PassWord"]:::db
-    
-    A --> B2["init_es
-    参数:
-    - host='http://localhost:9200'"]:::db
-    
-    A --> B3["init_redis
-    参数:
-    - host='localhost', port=6379'"]:::cache
-    
-    A --> C["data_process
-    参数:
-    - data_location, data_type
-    - model_name, api_key
-    - url_split
-    功能: 多线程多模态处理"]:::process
-    
-    C --> D["retry_function
-    参数:
-    - func, max_retries, delay
-    功能: 失败重试"]:::process
-    
-    D --> E["indexParams
-    参数:
-    - C_G_Choic, IndexName
-    功能: 选择CPU/GPU索引"]:::decision
-    
-    E --> F["milvus_connect
-    参数:
-    - IP, Port, UserName
-    - PassWord, VectorName
-    - CollectionName, indexParam
-    - ReplicaNum, dataList
-    - url_split, return_collection
-    功能: 建库/建表/插入/副本"]:::db
-    
-    F --> G["insert_with_quality_check
-    参数:
-    - collection, dataList
-    功能: 数据质量评估与分流"]:::process
-    
-    G --> H["log_event
-    功能: 日志记录"]:::process
-    
-    H --> I["数据库构建完成"]:::startend
+**步骤：**
 
-    %% Search Process
-    subgraph Search_Workflow["Search Workflow"]
-        J["Cre_Search
-        参数:
-        - VectorName, CollectionName
-        - question, topK
-        - ColChoice, api_key
-        - reorder_strategy"]:::startend
-        
-        J --> K["log_event
-        功能: 检索开始日志"]:::process
-        
-        K --> L["search
-        参数:
-        - VectorName, CollectionName
-        - question, topK, api_key
-        功能: 统一检索接口"]:::process
-        
-        L --> M["cached_search
-        参数:
-        - query_key, search_function
-        - redis_client
-        功能: Redis缓存"]:::cache
-        
-        M --> N["_do_search
-        功能: 实际检索"]:::process
-        
-        N --> O1["Milvus向量检索
-        参数:
-        - CollectionName
-        - embedding, topK"]:::db
-        
-        N --> O2["es_search
-        参数:
-        - es_client, question
-        - topK, es_index"]:::db
-        
-        O1 --> P["合并检索结果"]:::process
-        O2 --> P
-        
-        P --> Q["过滤无embedding结果"]:::process
-        
-        Q --> R["聚类
-        参数:
-        - ColChoice, embeddings
-        功能: KMeans/HDBSCAN"]:::cluster
-        
-        R --> S["reorder_clusters
-        参数:
-        - clustered_results
-        - query_vector, strategy
-        功能: 重排序"]:::cluster
-        
-        S --> T["返回聚类和重排序结果"]:::process
-        
-        T --> U["log_event
-        功能: 检索完成日志"]:::process
-    end
+选中心： 先随机选 k 个点，把它们当成初始的中心点。
 
-    %% Connection Relationships
-    I -.-> J
-```
+分堆： 把每个数据点都分到离它最近的中心点所在的群组。
 
+算中心： 重新计算每个群组的中心点（通常是这个群组里所有点的平均值）。
 
+重复： 重复 “分堆” 和 “算中心” 这两步，直到中心点不再怎么变化，或者达到你设定的最大循环次数。
+
+**HDBSCAN**
+HDBSCAN聚类是一种基于密度的聚类算法。
+该算法速度慢，形成的簇是任意形状的，但适合于复杂的、含噪声的数据集。
+1. 通过最小样本数和最小簇大小来估计每个点的密度，也就是看这个点周围有多少邻居
+2. 基于点之间的距离和密度关系构建最小生成树，代表两个点的距离
+3. 通过不断的切割形成不同密度的簇，也就是说切割哪些距离很长的边（距离很远的点），哪些怎么都连接不上的点就是噪声点
+4. HDBSCAN算法可以自动判断分几组，还会自动判断哪些组最稳定
+
+**核心概念：**
+
+核心距离： 对于每个点，找到包含至少 minPts 个点的最小半径，这个半径就是该点的核心距离。
+
+可达距离： 点 A 到点 B 的可达距离是：点 B 的核心距离 和 A 到 B 的实际距离，两者取最大值。
+
+互达性图： 基于可达距离构建的图，距离越小，连接越紧密。
+
+簇的提取： 通过在互达性图上进行聚类，提取簇。
+
+**步骤（简化版）：**
+
+算密度： 评估每个点周围的密度。
+
+建树： 构建一个层次聚类树，把密度相近的点放在一起。
+
+剪枝： 根据密度和连通性，对聚类树进行剪枝，去除噪声和不稳定的簇。
+
+提取簇： 从剪枝后的树中提取最终的簇。
+
+请理解聚类的概念,可以参考哔哩哔哩中zilliz的讲解视频,在二维平面上,运用聚类算法可以更好的将相似的数据聚在一起，从而提高检索性能。
 ### 关于聚类的时机
 下面有三种使用聚类算法的时机：
 1. 如果检索性能是首要目标：
@@ -163,8 +79,9 @@ flowchart TD
    * 在检索时对召回的数据进行分类，动态分析数据分布
 3. 如果需要离线数据分析
    * 定期对数据进行聚类，用于分析或推荐系统
-请理解聚类的概念,可以参考哔哩哔哩中zilliz的讲解视频,在二维平面上,运用聚类算法可以更好的将相似的数据聚在一起，从而提高检索性能。
-> 目前采用的方案一:性能作为首选目标
+
+
+> 目前采用方案一:性能作为首选目标
 
 ### 关于重排序
 有四种方案
