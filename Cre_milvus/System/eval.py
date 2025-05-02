@@ -6,7 +6,7 @@ def evaluate_data_quality(txt):
     简单的向量质量评估函数。牛牛你需要做的是判断这个txt（一条文本数据）的质量如何，如果质量高就返回True，
     否则返回False。
     """
-    return None
+    return True
 
 def insert_with_quality_check(collection, dataList):
     high_quality = []

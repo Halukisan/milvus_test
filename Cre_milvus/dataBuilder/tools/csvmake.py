@@ -13,7 +13,6 @@ def process_csv(csv_path):
     """
     # 定义 CSV 文件读取逻辑
     def read_csv(csv_path, encoding='utf-8'):
-            # 列出目录中的所有 Markdown 文件
         if not os.path.exists(csv_path):
             raise FileNotFoundError(f"目录 {csv_path} 不存在")
         csv_files = [file for file in os.listdir(csv_path) if file.endswith('.md')]

@@ -1,6 +1,6 @@
 import json
 import numpy as np
-from redisvl.index import Index
+from redisvl import index
 from redisvl.query import VectorQuery
 from System.eval import score_redis_recall
 
@@ -15,21 +15,34 @@ def normalize_embedding(embedding):
     # 如果范数大于0，则将数组除以范数，并转换为列表返回；否则直接将数组转换为列表返回
     return (arr / norm).tolist() if norm > 0 else arr.tolist()
 
-def cache_embedding_result(redis_client, result_list):
+def cache_embedding_result(redis_client, result_list,url_split):
     """
     result_list: 列表，每个元素为dict，包含id、content、embedding等字段
     """
-    idx = Index(redis_client, name="qa_embedding")
+    # 创建Index对象，用于存储embedding结果
+    idx = index(redis_client, name="qa_embedding")
+    # 遍历result_list中的每个元素
     for item in result_list:
-        doc = {
-            "id": item.get("id"),
-            "content": item.get("content", ""),
-            "embedding": normalize_embedding(item.get("embedding", [])),
-            "distance": item.get("distance", 0)
-        }
+        # 创建doc字典，用于存储每个元素的id、content、embedding和distance字段
+        if url_split:
+            doc = {
+                "id": item.get("id"),
+                "content": item.get("content", ""),
+                "embedding": normalize_embedding(item.get("embedding", [])),
+                "distance": item.get("distance", 0),
+                "url": item.get("url", "")
+            }
+        else:
+            doc = {
+                "id": item.get("id"),
+                "content": item.get("content", ""),
+                "embedding": normalize_embedding(item.get("embedding", [])),
+                "distance": item.get("distance", 0),
+            }
+        # 将doc字典添加到Index对象中
         idx.add_document(doc)
-def search_similar_embedding(redis_client, embedding, top_k=1, score_threshold=0.85):
-    idx = Index(redis_client, name="qa_embedding")
+def search_similar_embedding(redis_client, embedding, top_k=1, score_threshold=0.80):
+    idx = index(redis_client, name="qa_embedding")
     # 做归一化处理
     embedding = normalize_embedding(embedding)
     q = VectorQuery("embedding", embedding, top_k=top_k)
@@ -39,6 +52,6 @@ def search_similar_embedding(redis_client, embedding, top_k=1, score_threshold=0
     # resList里面有score字段
     if resList:
         # 可以根据score排序或筛选
-        scored_results = [r for r in scored_results if r["score"] > score_threshold]
+        scored_results = [r for r in resList if r["score"] > score_threshold]
         return scored_results
     return None

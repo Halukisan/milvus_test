@@ -1,9 +1,9 @@
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
-from Cre_milvus.dataBuilder.tools.csvmake import process_csv
-from Cre_milvus.dataBuilder.tools.mdmake import process_md
-from Cre_milvus.dataBuilder.tools.pdfmake import process_pdf
-from Cre_milvus.dataBuilder.tools.txtmake import process_txt
+from .tools.csvmake import process_csv
+from .tools.mdmake import process_md
+from .tools.pdfmake import process_pdf
+from .tools.txtmake import process_txt
 
 def data_process(data_location, url_split):
     """

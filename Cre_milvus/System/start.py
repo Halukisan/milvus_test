@@ -25,13 +25,18 @@ config = load_config()
 def Cre_VectorDataBaseStart_from_config(config):
     milvus_cfg = config["milvus"]
     data_cfg = config["data"]
+    redis_cfg = config["redis"]
+    sys_cfg = config["system"]
     
     es_cfg = config.get("elasticsearch", {})
     es_host = es_cfg.get("host", "http://localhost:9200")
     es_index_name = es_cfg.get("index_name", "doc_index")
 
+    redis_host = redis_cfg.get("host", "localhost")
+    redis_port = redis_cfg.get("port", 6379)
+
     return Cre_VectorDataBaseStart(
-        C_G_Choic=milvus_cfg.get["index_device"],
+        C_G_Choic=milvus_cfg["index_device"],
         IP=milvus_cfg["host"],
         Port=milvus_cfg["port"],
         UserName=milvus_cfg["user"],
@@ -41,25 +46,28 @@ def Cre_VectorDataBaseStart_from_config(config):
         IndexName=milvus_cfg["index_name"],
         ReplicaNum=milvus_cfg["replica_num"],
 
-        Data_Location=data_cfg["location"],
-        url_split=data_cfg["url_split"],
+        Data_Location=data_cfg["data_location"],
+        url_split=sys_cfg["url_split"],
 
         es_host=es_host,
-        es_index_name=es_index_name
+        es_index_name=es_index_name,
+
+        re_host = redis_host,
+        re_port = redis_port
     )
 
 def Cre_VectorDataBaseStart(
     C_G_Choic, IP, Port, UserName, PassWord, VectorName, CollectionName,
     IndexName, ReplicaNum, Data_Location, url_split, 
-    es_host, es_index_name
+    es_host, es_index_name,re_host, re_port
 ):
     """
     构建向量数据库并插入数据，参数全部由配置文件自动读取。
     """
     # 初始化连接
-    init_milvus(VectorName, IP, Port, UserName, PassWord)
+    #init_milvus(VectorName, IP, Port, UserName, PassWord)
     init_es(es_host)
-    init_redis(host="localhost", port=6379)
+    init_redis(host=re_host, port=re_port)
     log_event("开始数据处理")
     # 数据处理加重试
     dataList = retry_function(
@@ -67,11 +75,11 @@ def Cre_VectorDataBaseStart(
             data_location=Data_Location,
             url_split=url_split
         )
-    )
+    )()
     log_event(f"数据处理完成，数据量：{len(dataList)}")
     # === 写入ES ===
     try:
-        from System.init import es_client  # 假设init_es已设置全局es_client
+        from System.init import es_client  
         index_name = es_index_name
         create_index(es_client, index_name)
         embedder = EmbeddingGenerator()
@@ -93,23 +101,23 @@ def Cre_VectorDataBaseStart(
     # 连接Milvus并插入数据
     log_event("开始连接Milvus并插入数据")
     def milvus_insert():
-        status, collection = milvus_connect_insert(
-            IP, Port, UserName, PassWord, VectorName, CollectionName, indexParam, ReplicaNum, dataList, url_split=url_split, return_collection=True
-        )
         # 数据质量评估与分流插入
-        if status and collection:
-            # 这里插入的数据是低质量数据
-            insert_with_quality_check(collection, dataList)
+        status = milvus_connect_insert(
+           CollectionName, indexParam, ReplicaNum, dataList, url_split,IP, Port,UserName, PassWord,VectorName
+        )
+    
         return status
 
-    Con_status = retry_function(milvus_insert)
+    Con_status = retry_function(milvus_insert)()
     log_event("Milvus插入流程完成")
     return Con_status
 
 def Cre_Search(config, question):
+    #TODO：问题分类，审核，判断是否需要检索
     """
     从配置文件读取参数，执行检索、聚类和重排序。
     """
+    # 读取配置
     milvus_cfg = config["milvus"]
     search_cfg = config.get("search", {})
     CollectionName = milvus_cfg["collection_name"]
@@ -119,8 +127,12 @@ def Cre_Search(config, question):
     reorder_strategy = search_cfg.get("reorder_strategy", "distance")
 
     log_event(f"开始检索: {question}")
-    # 搜索数据
-    responseList = search(CollectionName, question, topK)
+    # 搜索数据 （多路召回）命中缓存直接返回，
+    # TODO:缓存冷启动问题
+    data_cfg = config["data"]
+    url_split=data_cfg["url_split"],
+
+    responseList = search(CollectionName, question, topK,url_split)
 
     # 检查搜索结果是否为空
     if not responseList:
@@ -133,6 +145,7 @@ def Cre_Search(config, question):
     # 转换为 NumPy 数组
     embeddings = np.array(embeddings)
 
+# 下面是进行搜索结果重排序的部分，对于召回的大批量的数据进行聚类，和重排序
     # 根据选择的聚类算法进行聚类
     if ColChoice.lower() == "hdbscan":
         clusterer = hdbscan.HDBSCAN(min_samples=3, min_cluster_size=2)
@@ -144,21 +157,31 @@ def Cre_Search(config, question):
     else:
         raise ValueError(f"Unsupported clustering algorithm: {ColChoice}")
 
-    # 将聚类结果与搜索结果结合
+    # 将聚类结果
     clustered_results = {}
     for idx, label in enumerate(labels):
         if label not in clustered_results:
             clustered_results[label] = []
-        clustered_results[label].append({
-            "id": ids[idx],
-            "embedding": embeddings[idx].tolist(),
-            "distance": responseList[idx]["distance"]
-        })
+        if url_split:
+            clustered_results[label].append({
+                "id": ids[idx],
+                "embedding": embeddings[idx].tolist(),
+                "content": responseList[idx]["content"],
+                "distance": responseList[idx]["distance"],
+                "url": responseList[idx]["url"]
+            })
+        else:
+            clustered_results[label].append({
+                "id": ids[idx],
+                "embedding": embeddings[idx].tolist(),
+                "content": responseList[idx]["content"],
+                "distance": responseList[idx]["distance"]
+            })
 
-    # 对聚类结果和搜索结果进行重排序
-    query_vector = responseList[0]["embedding"]  
+    # 对聚类结果进行重排序
+    query_vector = EmbeddingGenerator().get_embedding(question)
     sorted_clusters = reorder_clusters(clustered_results, query_vector, strategy=reorder_strategy)
-    log_event(f"检索完成，返回结果数：{len(responseList)}")
+    log_event(f"检索完成，返回结果数：{len(sorted_clusters)}")
 
     # 返回重排序后的结果
     return {

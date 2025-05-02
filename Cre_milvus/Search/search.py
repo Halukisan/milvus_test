@@ -7,7 +7,7 @@ from Search.redisSer import search_similar_embedding, cache_embedding_result
 from Search.milvusSer import milvus_search
 
 
-def search(CollectionName, question, topK):
+def search(CollectionName, question, topK,url_split):
     results = None
     def _do_search():
         log_event("多路召回开始")
@@ -31,7 +31,7 @@ def search(CollectionName, question, topK):
         all_results = milvus_list + es_list
         all_results = [r for r in all_results if r.get("embedding")]
         # 4. 写入redis向量缓存
-        cache_embedding_result(redis_client, all_results)
+        cache_embedding_result(redis_client, all_results,url_split)
         return all_results
     
     results = _do_search()
