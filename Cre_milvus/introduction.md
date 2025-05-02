@@ -4,6 +4,31 @@
 可快速接入项目的Milvus向量数据库方案，:done
 提供CPU和GPU索引选择，:done
 登录加密、:done
+> 修改milvus配置文件、docker重启，
+```shell
+   ...
+   common:
+   ...
+   security:
+      authorizationEnabled: true
+   ...
+```
+> 启用身份登录功能时，需要提供令牌（在连接逻辑处提供token），不然会报gRPC错误
+```python
+   client = MilvusClient(
+      uri="http://localhost:19530",
+      token="root:Milvus"
+   )
+
+   # 2. Create a user
+   client.create_user(user_name="user_1", password="P@ssw0rd")
+```
+
+> 默认root用户登录后，可创建其他身份的用户
+> 重置密码，或者超级用户
+> 用户名必须以字母开头，32个字符以内，只能包含下划线、字母或数字
+> 密码必须至少包含6个字符，长度不得超过256个字符
+
 数据聚类分块选择，done
 内存副本以提高吞吐，:done
 多模态数据（文本、文件、图片）自动化处理和存储。:done
